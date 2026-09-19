@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+.env
+.env.local
+generated/
+__pycache__/
+*.pyc
+.DS_Store
+npm-debug.log*
+tsconfig.tsbuildinfo

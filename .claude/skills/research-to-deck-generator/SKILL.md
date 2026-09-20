@@ -1,6 +1,6 @@
 ---
 name: research-to-deck-generator
-description: Build brief for Portfolio P3 — Research-to-Deck Generator. Activates when the user asks to build, resume, or extend the RAG-to-PPTX pipeline described in Deliverable.md (Semantic Scholar ingestion, pgvector RAG, Claude synthesis, python-pptx deck assembly, Next.js API, Vercel deploy). Does not activate for unrelated tasks.
+description: Build brief for Portfolio P3 — Research-to-Deck Generator. Activates when the user asks to build, resume, or extend the RAG-to-PPTX pipeline described in Deliverable.md (OpenAlex ingestion, pgvector RAG, Claude synthesis, python-pptx deck assembly, Next.js API, Vercel deploy). Does not activate for unrelated tasks.
 ---
 
 ## Objective
@@ -11,13 +11,13 @@ Target stack:
 - Next.js (App Router, latest stable) for the API layer
 - Postgres with the pgvector extension for embeddings storage
 - BullMQ + Redis for background job processing (ingestion and deck generation are long-running)
-- Semantic Scholar API for paper discovery and PDF retrieval
+- OpenAlex API for paper discovery and PDF retrieval
 - Claude API (current model, e.g. claude-sonnet-5 — do not hardcode a deprecated slug) for synthesis
 - python-pptx for deck assembly, invoked from the Node worker via a Python subprocess (child_process) — do not stand up a separate microservice for this
 
 ## Target State
 Five working stages, wired end-to-end:
-1. **Ingestion**: Semantic Scholar API search for a topic → fetch PDFs → chunk → embed → store in pgvector
+1. **Ingestion**: OpenAlex API search for a topic → fetch PDFs → chunk → embed → store in pgvector
 2. **RAG**: multi-query retrieval with re-ranking to surface the highest-signal chunks for a given topic
 3. **Synthesis**: Claude call that turns retrieved chunks into slide titles, bullets, and citation mappings back to source papers
 4. **PPTX assembly**: a Python script (invoked via subprocess) uses python-pptx to build a branded deck — template styling, speaker notes, inline citations — from the synthesis output
@@ -30,8 +30,8 @@ Deployed to Vercel and reachable at a live URL: topic in, downloadable cited PPT
 - Do NOT touch: `.claude/`, `.kilo/`.
 
 ## Constraints
-- All secrets (Claude API key, Semantic Scholar API key if used, `DATABASE_URL`, `REDIS_URL`) must be read from environment variables only — never hardcoded or committed.
-- Respect Semantic Scholar's published rate limits in the ingestion client.
+- All secrets (Claude API key, `DATABASE_URL`, `REDIS_URL`) must be read from environment variables only — never hardcoded or committed. OpenAlex needs no key; an optional `OPENALEX_MAILTO` env var opts into its polite pool.
+- Respect OpenAlex's published rate limits in the ingestion client.
 - Only add dependencies genuinely required for the five stages above; ask before introducing any external service not already listed here.
 - Only build what's requested — no auth, billing, multi-tenancy, or UI beyond what's needed to trigger a generation job and fetch its download link.
 

@@ -1,7 +1,7 @@
 import { getPool } from "./db";
 import { embedTexts, toPgvector } from "./embeddings";
-import { fetchPdfText, searchPapers } from "./semanticScholar";
-import type { SemanticScholarPaper } from "./types";
+import { fetchPdfText, searchPapers } from "./openAlex";
+import type { OpenAlexPaper } from "./types";
 
 const CHUNK_SIZE_CHARS = 1800;
 const CHUNK_OVERLAP_CHARS = 200;
@@ -28,9 +28,9 @@ export function chunkText(text: string): string[] {
 export type IngestionProgress = (message: string) => void;
 
 /**
- * Ingests up to `limit` papers for a topic: search Semantic Scholar, fetch PDF
+ * Ingests up to `limit` papers for a topic: search OpenAlex, fetch PDF
  * text (falling back to the abstract), chunk, embed, and store in pgvector.
- * Papers already ingested (by semantic_scholar_id) are reused, not re-fetched.
+ * Papers already ingested (by openalex_id) are reused, not re-fetched.
  */
 export async function ingestTopic(topic: string, limit = 50, onProgress?: IngestionProgress): Promise<number> {
   const pool = getPool();
@@ -46,8 +46,8 @@ export async function ingestTopic(topic: string, limit = 50, onProgress?: Ingest
     let paperId: string;
     try {
       const existing = await client.query<{ id: string }>(
-        "SELECT id FROM papers WHERE semantic_scholar_id = $1",
-        [paper.paperId]
+        "SELECT id FROM papers WHERE openalex_id = $1",
+        [paper.id]
       );
 
       if (existing.rows.length > 0) {
@@ -60,11 +60,11 @@ export async function ingestTopic(topic: string, limit = 50, onProgress?: Ingest
         }
 
         const inserted = await client.query<{ id: string }>(
-          `INSERT INTO papers (semantic_scholar_id, title, authors, year, venue, url, abstract)
+          `INSERT INTO papers (openalex_id, title, authors, year, venue, url, abstract)
            VALUES ($1, $2, $3, $4, $5, $6, $7)
            RETURNING id`,
           [
-            paper.paperId,
+            paper.id,
             paper.title,
             (paper.authors ?? []).map((a) => a.name),
             paper.year,
@@ -104,4 +104,4 @@ export async function ingestTopic(topic: string, limit = 50, onProgress?: Ingest
   return ingestedCount;
 }
 
-export type { SemanticScholarPaper };
+export type { OpenAlexPaper };

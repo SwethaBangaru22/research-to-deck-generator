@@ -19,15 +19,15 @@ export interface Job {
   updated_at: string;
 }
 
-export interface SemanticScholarPaper {
-  paperId: string;
+export interface OpenAlexPaper {
+  id: string;
   title: string;
   abstract: string | null;
   year: number | null;
   venue: string | null;
   url: string | null;
   authors: { name: string }[];
-  openAccessPdf: { url: string } | null;
+  pdfUrl: string | null;
 }
 
 export interface RankedChunk {

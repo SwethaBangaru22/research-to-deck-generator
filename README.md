@@ -1,6 +1,6 @@
 # Research-to-Deck Generator
 
-Turns a research topic into a cited, branded slide deck: RAG over 50+ papers pulled from Semantic Scholar, synthesized by Claude, assembled into a `.pptx` with python-pptx, triggered through a Next.js API and downloaded via a signed link.
+Turns a research topic into a cited, branded slide deck: RAG over 50+ papers pulled from OpenAlex, synthesized by Claude, assembled into a `.pptx` with python-pptx, triggered through a Next.js API and downloaded via a signed link.
 
 ## Architecture
 
@@ -16,18 +16,17 @@ POST /api/generate ──► jobs row (queued) ──► BullMQ queue
         ┌─────────────┬─────────────┬────────────┼────────────┐
         ▼             ▼             ▼            ▼            ▼
    Ingestion        RAG        Synthesis     PPTX assembly   done
- (Semantic       (multi-query  (Claude:      (python-pptx    (download
-  Scholar →      retrieval +    slides,       via subprocess) token issued)
-  chunk →        Voyage         bullets,
-  embed →        rerank)        citations)
-  pgvector)
+ (OpenAlex →     (multi-query  (Claude:      (python-pptx    (download
+  chunk →        retrieval +    slides,       via subprocess) token issued)
+  embed →        Voyage         bullets,
+  pgvector)      rerank)        citations)
 ```
 
 GET `/api/status/:jobId` polls job state. When `status: "done"`, it returns a `downloadUrl` pointing at `GET /api/download/:jobId?token=...`.
 
 ## Two decisions this build made that weren't in the original spec
 
-The architecture brief named Next.js, Postgres/pgvector, BullMQ/Redis, Semantic Scholar, Claude, and python-pptx — but didn't name an embeddings/re-ranking provider, and "deploy to Vercel" doesn't by itself say where the background worker runs. Both were necessary to actually build the pipeline, so here's what was chosen and why — flag either one if you want a different call:
+The architecture brief named Next.js, Postgres/pgvector, BullMQ/Redis, OpenAlex, Claude, and python-pptx — but didn't name an embeddings/re-ranking provider, and "deploy to Vercel" doesn't by itself say where the background worker runs. Both were necessary to actually build the pipeline, so here's what was chosen and why — flag either one if you want a different call:
 
 1. **Embeddings + re-ranking: Voyage AI** (`voyage-3` for embeddings, `rerank-2` for re-ranking). It pairs naturally with Claude, covers both jobs from one provider, and needs one more API key (`VOYAGE_API_KEY`). Swap it in [src/lib/embeddings.ts](src/lib/embeddings.ts) if you'd rather use something else.
 2. **Worker hosting: a separate long-lived process, not a Vercel serverless function.** Vercel functions are stateless and time-limited — they can't run a persistent BullMQ worker or reliably shell out to a Python subprocess. So the split is: **Next.js app (API routes + UI) deploys to Vercel**; **the worker (`npm run worker`) needs a persistent host** — Railway, Render, Fly.io, or a small VM — with Python 3 and `requirements.txt` installed. Both processes point at the same `DATABASE_URL` and `REDIS_URL`.
@@ -50,7 +49,7 @@ The architecture brief named Next.js, Postgres/pgvector, BullMQ/Redis, Semantic 
    ```
    cp .env.example .env
    ```
-   Fill in `ANTHROPIC_API_KEY` and `VOYAGE_API_KEY` at minimum. `SEMANTIC_SCHOLAR_API_KEY` is optional but raises rate limits.
+   Fill in `ANTHROPIC_API_KEY` and `VOYAGE_API_KEY` at minimum. `OPENALEX_MAILTO` is optional — OpenAlex needs no key, but an email opts you into its higher-rate-limit "polite pool".
 
 4. **Run the migration**
    ```
@@ -80,7 +79,7 @@ Without live credentials/services (Postgres, Redis, an Anthropic key, a Voyage k
 
 Still to verify once you provide credentials and run `docker compose up`:
 - [ ] `npm run db:migrate` applies the schema cleanly
-- [ ] Ingestion actually pulls papers from Semantic Scholar and populates `paper_chunks`
+- [ ] Ingestion actually pulls papers from OpenAlex and populates `paper_chunks`
 - [ ] Retrieval returns sensible re-ranked chunks for a real topic
 - [ ] Claude synthesis output parses and cites correctly against real retrieved content
 - [ ] Full `POST /api/generate` → worker → `GET /api/download` loop with a real topic

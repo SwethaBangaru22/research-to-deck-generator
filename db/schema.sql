@@ -3,7 +3,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS papers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  semantic_scholar_id TEXT UNIQUE NOT NULL,
+  openalex_id TEXT UNIQUE NOT NULL,
   title TEXT NOT NULL,
   authors TEXT[] NOT NULL DEFAULT '{}',
   year INT,

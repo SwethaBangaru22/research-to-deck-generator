@@ -31,7 +31,7 @@ async function setFailed(jobId: string, error: string) {
 async function processJob(payload: DeckJobPayload) {
   const { jobId, topic } = payload;
 
-  await setStatus(jobId, "ingesting", "Searching and ingesting papers from Semantic Scholar");
+  await setStatus(jobId, "ingesting", "Searching and ingesting papers from OpenAlex");
   await ingestTopic(topic, 50, (message) => setStatus(jobId, "ingesting", message));
 
   await setStatus(jobId, "retrieving", "Running multi-query retrieval with re-ranking");
